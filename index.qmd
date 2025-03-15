@@ -130,10 +130,12 @@ max_number_test_days = 20
 alpha = 0.05
 power = 0.80
 index_to_control = 1.01
+treatment_mean = control_mean * index_to_control
+true_delta = treatment_mean - control_mean
 
 ```
 
-Assume our existing website converts 50% of customers to paying subscriptions.<br> We have new website that we think generates a lift of 101% --- or a delta-to-control = `{python} f"{control_mean*(index_to_control-1):.2%}"`.
+Assume our existing website converts 50% of customers to paying subscriptions.<br> We have new website that we think generates a lift of 101% --- or a delta-to-control = `{python} f"{true_delta:.2%}"`.
 
 ```{python}
 #| label: fig-mde
@@ -167,12 +169,14 @@ control_mean = 0.50
 alpha = 0.05
 power = 0.80
 index_to_control = 1.01
+treatment_mean = control_mean * index_to_control
+true_delta = treatment_mean - control_mean
 
 control_samples, treatment_samples = two_proportion_required_samples(
     alpha = alpha,
     power = power,
     control_rate = control_mean,
-    treatment_rate = control_mean*index_to_control,
+    treatment_rate = treatment_mean,
     control_to_treatment_ratio=1,
     tail_type="one_tail")
 
