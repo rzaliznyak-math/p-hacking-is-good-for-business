@@ -117,7 +117,9 @@ def df_to_html_with_highlighted_row(df, highlight_row=-1, column_width=150):
 
 We learned in our last paper that [**p-values**](https://rzaliznyak-math.github.io/numpy-random-p-value-power/#proper-p-value-practice){target="_blank"} control the rate of `False Positives` in our experiments --- how often we incorrectly declare `Statistical Significance`.
 
-You may have also heard that _**`p-hacking`**_, the practice of misusing p-values, should be avoided because it inflates `False Positive` rates. And while the aforementioned claim is absolutely true, it turns out that in many cases `p-hacking` is good for business.
+You may have also heard that _**`p-hacking`**_, the practice of misusing p-values, should be avoided because it inflates `False Positive` rates.
+
+While the aforementioned claim is absolutely true, here we will use _**`NumPy`**_ simulations to show that in many cases, it is profitable to engage in `p-hacking`.
 
 
 # Design Significance Test
@@ -125,8 +127,8 @@ You may have also heard that _**`p-hacking`**_, the practice of misusing p-value
 ```{python}
 
 control_mean = 0.50
-min_number_test_days = 7
-max_number_test_days = 20
+min_number_test_days = 3
+max_number_test_days = 5
 alpha = 0.05
 power = 0.80
 index_to_control = 1.01
@@ -135,7 +137,9 @@ true_delta = treatment_mean - control_mean
 
 ```
 
-Assume our existing website converts 50% of customers to paying subscriptions.<br> We have new website that we think generates a lift of 101% --- or a delta-to-control = `{python} f"{true_delta:.2%}"`.
+Let's use our traditional website example.
+
+Assume our existing website converts 50% of customers to paying subscribers.<br> We have a new website we think generates a lift of 101% --- or a delta-to-control = `{python} f"{true_delta:.2%}"`.
 
 ```{python}
 #| label: fig-mde
@@ -172,7 +176,7 @@ index_to_control = 1.01
 treatment_mean = control_mean * index_to_control
 true_delta = treatment_mean - control_mean
 
-control_samples, treatment_samples = two_proportion_required_samples(
+required_control_samples, required_treatment_samples = two_proportion_required_samples(
     alpha = alpha,
     power = power,
     control_rate = control_mean,
@@ -180,9 +184,124 @@ control_samples, treatment_samples = two_proportion_required_samples(
     control_to_treatment_ratio=1,
     tail_type="one_tail")
 
-print(f"Control Samples: {control_samples:,}")
-print(f"Treatment Samples: {treatment_samples:,}")
+print(f"Control Samples: {required_control_samples:,}")
+print(f"Treatment Samples: {required_treatment_samples:,}")
 
 ```
 
-According to our calculations, our significance test has a 5% False Positive Rate and an 80% chance of detecting a winner at these sample counts.
+According to our calculations, with the above sample counts, our significance test has a 5% False Positive Rate and an 80% chance of detecting a winner.
+
+# Our Treatment Effects
+
+Before we go further; let's make an assumption about our `Treatment Effects`.
+
+::: {style="margin-top: -0px; font-size: 97%"}
+```{python}
+#| label: fig-universe
+#| fig-cap: "Every treatment effect we simulate has an equal chance of being above or below 100"
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
+from scipy import stats
+
+
+null_average = 100
+scale = 0.5
+treatment_effect_samples = np.random.normal(loc=null_average, scale=scale, size=100000)
+
+x_global_min = min(treatment_effect_samples)
+x_global_max = max(treatment_effect_samples)
+x_range = np.linspace(x_global_min, x_global_max, 1000)
+
+
+kde = stats.gaussian_kde(np.random.laplace(loc=100, scale=scale, size=50000))
+y_kde = kde(x_range)
+
+# Calculate CDF
+cdf_values = stats.norm.cdf(x_range, loc=100, scale=scale)
+
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(
+        x=x_range,
+        y=y_kde,
+        mode='lines',
+        fill='tozeroy',
+        name=f'Scale: {scale}',
+        hovertemplate='Pr(Treatment Effect > %{x:.2f}) = %{customdata:.2%}<extra></extra>',
+        hoverlabel=dict(font_size=18, font_family="Arial"),
+        customdata=1 - cdf_values
+    ),
+    #row=row,
+    #col=col
+)
+
+fig.update_xaxes(title_text='Treatment Effect (ITC)',showticklabels=True, title_standoff=10)
+
+fig.update_layout(
+    title = "Treatment Effects are Laplace Distributed with μ = 100 and b = 0.5",
+    hoverlabel=dict(
+        font_size=16,
+        font_family="Arial",
+        font_color="white"
+    ),
+)
+
+fig.update_layout(
+    #height=500,  # Adjust height for 2x2 layout
+    #width=700,   # Adjust width for better spacing
+    showlegend=False,
+    font=dict(size=14)
+)
+fig.update_yaxes(title_text='', showticklabels=False)
+fig.update_xaxes(tickvals = [98,99,100,101,102])
+fig.show()
+
+```
+:::
+
+Though our significance test is designed to reliably detect effects at 101 or higher; our treatment effects have an equally likely chance of being above or below 100 (equality).
+
+# Simulate Dataset
+
+```{python}
+#| code-fold: true
+#| echo: true
+
+from numpy.random import seed, binomial
+from numpy import repeat, cumsum
+
+simulation_number = 0
+
+number_simulations = int(1e3)
+for simulation_number in range(number_simulations):
+    treatment_effect_actual = treatment_effect_samples[simulation_number]
+
+    control_daily_trials = int(required_control_samples/ max_number_test_days)
+    treatment_daily_trials = int(required_treatment_samples/ max_number_test_days)
+
+    control_trials_list = repeat(control_daily_trials, max_number_test_days)
+    treatment_trials_list = repeat(treatment_daily_trials, max_number_test_days)
+
+    control_events_list = binomial(control_daily_trials, control_mean, max_number_test_days)
+    treatment_events_list = binomial(treatment_daily_trials, treatment_mean, max_number_test_days)
+
+    inner_dict = {
+        "Effect Actual": round(treatment_effect_actual,2),
+        "Test Day": [i+1 for i in range(max_number_test_days)],
+        "control_trials":cumsum(control_trials_list),
+        "control_events": cumsum(control_events_list),
+    "treatment_trials":cumsum(treatment_trials_list),
+    "treatment_events": cumsum(treatment_events_list),
+
+
+    }
+
+sim_df = pd.DataFrame(inner_dict)
+
+
+
+# Display the DataFrame
+display(HTML(df_to_html_with_highlighted_row(sim_df)))
+
+```
