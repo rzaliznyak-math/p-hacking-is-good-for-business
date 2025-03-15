@@ -15,8 +15,8 @@ jupyter: python3
 ---
 
 ```{python}
-#| code-fold: true
-#| echo: true
+#| code-fold: false
+#| echo: false
 
 from math import ceil, sqrt
 from scipy.stats import norm
