@@ -1,0 +1,184 @@
+---
+title: "P-hacking is Good for Business"
+subtitle: "Using NumPy to show breaking the rules is profitable!"
+author: "Russ Zaliznyak <[rzaliznyak@gmail.com](mailto:rzaliznyak@gmail.com)>"
+date: "2025-03-14"
+execute:
+  echo: false
+format: 
+  html: 
+    css: style.css
+    toc: true
+    toc-expand: true
+    toc-indent: 1em
+jupyter: python3
+---
+
+```{python}
+#| code-fold: true
+#| echo: true
+
+from math import ceil, sqrt
+from scipy.stats import norm
+
+
+def two_proportion_required_samples(
+    alpha,
+    power,
+    control_rate,
+    treatment_rate,
+    control_to_treatment_ratio=1,
+    tail_type="one_tail",
+):
+    """Calculate the required number of samples for two-proportion test.
+    :param float alpha: Value in (0,1) that specifies desired False Positive Rate
+    :param float power: Value in (0,1) that specifies desired 1 - False Negative Rate
+    :param float control_rate: Value in (0,1) that specifies expected control rate
+    :param float treatment_rate: Value in (0,1) that specifies expected treatment rate
+    :param float control_to_treatment_ratio: The ratio of control to treatment samples
+    :param string tail_type: Specifies one-tail or two-tail experiment\n
+        Defaults to "two_tail" if anything other than "one_tail" is given
+    :return: prob_tuple: Tuple of required control samples and treatment samples
+    :rtype: tuple
+    """
+    alpha_adjusted = (
+        alpha if tail_type is None or tail_type.lower() == "one_tail" else alpha / 2
+    )
+    beta = 1 - power
+
+    ##Determine how extreme z-score must be to reach statistically significant result
+    z_stat_critical = norm.ppf(1 - alpha_adjusted)
+    ##Determine z-score of Treatment - Control that corresponds to a True Positive Rate (1-beta)
+    z_power_critical = norm.ppf(beta)
+    ##Expected Difference between treatment and control
+    expected_delta = treatment_rate - control_rate
+    ##Control Allocation Rate
+    control_allocation = control_to_treatment_ratio / (control_to_treatment_ratio + 1)
+    ##Treatment Allocation Rate
+    treatment_allocation = 1 - control_allocation
+
+    ##Calculate Variance of Treatment Rate - Control Rate
+    blended_p = (
+        treatment_rate * treatment_allocation + control_rate * control_allocation
+    )
+    blended_q = 1 - blended_p
+    variance_blended = (
+        blended_p * blended_q / (control_allocation * treatment_allocation)
+    )
+    ##Total Samples Required
+    total_samples_required = (
+        variance_blended
+        * ((z_power_critical - z_stat_critical) / (0 - expected_delta)) ** 2
+    )
+    ##Split total samples into control and treatment
+    control_samples = ceil(control_allocation * total_samples_required)
+    treatment_samples = ceil(treatment_allocation * total_samples_required)
+    ##Perhaps return required_delta in the future
+    required_delta = z_stat_critical * sqrt(variance_blended) + 0
+    return (control_samples, treatment_samples)
+
+```
+
+```{python}
+from IPython.display import Markdown, display, HTML
+import pandas as pd
+
+def df_to_html_with_highlighted_row(df, highlight_row=-1, column_width=150):
+    # Start building the HTML table
+    html = '<table style="border-collapse: collapse; width: 100%;">'
+    
+    # Add header row with fixed width
+    html += '<tr>'
+    for col in df.columns:
+        html += f'<th style="border: 1px solid black; padding: 8px; width: {column_width}px; background-color: #f0f0f0;">{col}</th>'
+    html += '</tr>'
+    
+    # Add data rows, highlighting the specified row
+    for index, row in df.iterrows():
+        html += '<tr'
+        if index == highlight_row:
+            html += ' style="background-color: yellow;"'  # Highlight the specified row
+        html += '>'
+        
+        for value in row:
+            html += f'<td style="border: 1px solid black; padding: 8px; width: {column_width}px;">{value}</td>'
+        
+        html += '</tr>'
+    
+    html += '</table>'
+    
+    return html
+
+
+
+```
+
+# Introduction
+
+We learned in our last paper that [**p-values**](https://rzaliznyak-math.github.io/numpy-random-p-value-power/#proper-p-value-practice){target="_blank"} control the rate of `False Positives` in our experiments --- how often we incorrectly declare `Statistical Significance`.
+
+You may have also heard that _**`p-hacking`**_, the practice of misusing p-values, should be avoided because it inflates `False Positive` rates. And while the aforementioned claim is absolutely true, it turns out that in many cases `p-hacking` is good for business.
+
+
+# Design Significance Test
+
+```{python}
+
+control_mean = 0.50
+min_number_test_days = 7
+max_number_test_days = 20
+alpha = 0.05
+power = 0.80
+index_to_control = 1.01
+
+```
+
+Assume our existing website converts 50% of customers to paying subscriptions.<br> We have new website that we think generates a lift of 101% --- or a delta-to-control = `{python} f"{control_mean*(index_to_control-1):.2%}"`.
+
+```{python}
+#| label: fig-mde
+#| fig-cap: "Minimum Detectable Effect (MDE)"
+
+data = {
+    #"Min( Test Days )": [min_number_test_days],
+    "Max( Test Days )": [max_number_test_days],
+    "Conversion Rate": [f"{control_mean:.1%}"],
+    "MDE (ITC)": [index_to_control*100],
+    "Significance (α)": [alpha],
+    "Power (1 - β)": [power],
+
+}
+
+df = pd.DataFrame(data)
+
+# Display the DataFrame
+display(HTML(df_to_html_with_highlighted_row(df)))
+
+```
+
+Using the methods from our last paper, we can calculate exactly how many `control` and `treatment` samples would be needed for this experiment. 
+
+
+```{python}
+#| code-fold: true
+#| echo: true
+
+control_mean = 0.50
+alpha = 0.05
+power = 0.80
+index_to_control = 1.01
+
+control_samples, treatment_samples = two_proportion_required_samples(
+    alpha = alpha,
+    power = power,
+    control_rate = control_mean,
+    treatment_rate = control_mean*index_to_control,
+    control_to_treatment_ratio=1,
+    tail_type="one_tail")
+
+print(f"Control Samples: {control_samples:,}")
+print(f"Treatment Samples: {treatment_samples:,}")
+
+```
+
+According to our calculations, our significance test has a 5% False Positive Rate and an 80% chance of detecting a winner at these sample counts.
