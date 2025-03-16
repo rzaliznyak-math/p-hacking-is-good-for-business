@@ -368,7 +368,7 @@ display(HTML(sim_df[sim_df.columns[1:]].tail(1).to_html(index=False)))
 
 Let's check the results of our `{python} f"{number_simulations:,}"` simulations. Recall that 50% of the time; treatment effects are less than 100.
 
-## When Treatment Effect < 100
+## Treatment Effect < 100
 
 When our true Treatment Effect < 100, our significance test performs very well.
 
@@ -383,7 +383,7 @@ negative_effect_accuracy = 1 - mean(where(final_df["p-value"] < 0.05 , 1, 0))
 **Retained Control**: `{python} f"{negative_effect_accuracy:.2%}"`
 
 
-## When Treatment Effect > 100
+## Treatment Effect > 100
 
 When our true Treatment Effect > 100, our significance test performs terribly.
 
