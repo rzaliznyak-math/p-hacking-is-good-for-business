@@ -379,7 +379,7 @@ When our true Treatment Effect < 100, our significance test performs very well.
 from numpy import mean, where
 
 final_df = pd.concat(map(pd.DataFrame, all_negative_effect_results), ignore_index=True)
-final_df = final_df[final_df.Day == 5]
+final_df = final_df[final_df.Day == max_number_test_days]
 
 negative_effect_accuracy = 1 - mean(where(final_df["p-value"] < 0.05 , 1, 0))
 ```
@@ -394,7 +394,7 @@ When our true Treatment Effect > 100, our significance test performs terribly.
 from numpy import mean, where, array
 
 final_df = pd.concat(map(pd.DataFrame, all_positive_effect_results), ignore_index=True)
-final_df = final_df[final_df.Day == 5]
+final_df = final_df[final_df.Day == max_number_test_days]
 
 positive_effect_accuracy = mean(where(final_df["p-value"] < alpha , 1, 0))
 
@@ -437,6 +437,25 @@ later_df["first_day"] = later_df[["first_occurrence_sig", "first_day_occurrence_
 display(HTML(later_df[later_df.columns[1:len(later_df.columns)-4]].tail(5).to_html(index=False)))
 
 ```
+
+## Treatment Effect < 100
+
+When our true Treatment Effect < 100, our significance test performs a little worse.
+
+```{python}
+from numpy import mean, where, array
+
+small_df = later_df[later_df.Day == later_df.first_day].copy()
+
+negative_df = small_df [small_df.true_effect < 100].copy()
+
+avg_number_days = negative_df["Day"].mean()
+
+negative_effect_accuracy = 1 - mean(where(negative_df["p-value"] < alpha , 1, 0))
+```
+**Retained Control**: `{python} f"{negative_effect_accuracy:.2%}"`; Treatment correctly didn't reach `Significance (α) = 0.05`. <br>
+**Avg runtime**: `{python} f"{avg_number_days:.2f}"`
+
 
 
 ## Treatment Effect > 100
