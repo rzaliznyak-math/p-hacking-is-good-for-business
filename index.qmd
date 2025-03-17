@@ -83,31 +83,33 @@ def two_proportion_required_samples(
 from IPython.display import Markdown, display, HTML
 import pandas as pd
 
+
 def df_to_html_with_highlighted_row(df, highlight_row=-1, column_width=150):
     # Start building the HTML table
     html = '<table style="border-collapse: collapse; width: 100%;">'
-    
+
     # Add header row with fixed width
-    html += '<tr>'
+    html += "<tr>"
     for col in df.columns:
         html += f'<th style="border: 1px solid black; padding: 8px; width: {column_width}px; background-color: #f0f0f0;">{col}</th>'
-    html += '</tr>'
-    
+    html += "</tr>"
+
     # Add data rows, highlighting the specified row
     for index, row in df.iterrows():
-        html += '<tr'
+        html += "<tr"
         if index == highlight_row:
             html += ' style="background-color: yellow;"'  # Highlight the specified row
-        html += '>'
-        
+        html += ">"
+
         for value in row:
             html += f'<td style="border: 1px solid black; padding: 8px; width: {column_width}px;">{value}</td>'
-        
-        html += '</tr>'
-    
-    html += '</table>'
-    
+
+        html += "</tr>"
+
+    html += "</table>"
+
     return html
+
 
 
 
@@ -124,7 +126,15 @@ While the aforementioned claim is absolutely true, here we will use _**`NumPy`**
 
 # Design Significance Test
 
+Let's use our traditional website example.
+
+Assume our existing website converts 50% of customers to paying subscribers.<br> We have a new website we think generates a lift of 101% --- or a delta-to-control = `{python} f"{0.005:.2%}"`.
+
 ```{python}
+#| label: fig-mde
+#| fig-cap: "Minimum Detectable Effect (MDE)"
+#| code-fold: true
+#| echo: true
 
 control_mean = 0.50
 min_number_test_days = 3
@@ -135,24 +145,12 @@ index_to_control = 1.01
 treatment_mean_planned = control_mean * index_to_control
 true_delta_planned = treatment_mean_planned - control_mean
 
-```
-
-Let's use our traditional website example.
-
-Assume our existing website converts 50% of customers to paying subscribers.<br> We have a new website we think generates a lift of 101% --- or a delta-to-control = `{python} f"{true_delta_planned:.2%}"`.
-
-```{python}
-#| label: fig-mde
-#| fig-cap: "Minimum Detectable Effect (MDE)"
-
 data = {
-    #"Min( Test Days )": [min_number_test_days],
     "Max( Test Days )": [max_number_test_days],
     "Conversion Rate": [f"{control_mean:.1%}"],
-    "MDE (ITC)": [index_to_control*100],
+    "MDE (ITC)": [index_to_control * 100],
     "Significance (α)": [alpha],
     "Power (1 - β)": [power],
-
 }
 
 df = pd.DataFrame(data)
@@ -177,12 +175,13 @@ treatment_mean = control_mean * index_to_control
 true_delta = treatment_mean - control_mean
 
 required_control_samples, required_treatment_samples = two_proportion_required_samples(
-    alpha = alpha,
-    power = power,
-    control_rate = control_mean,
-    treatment_rate = treatment_mean,
+    alpha=alpha,
+    power=power,
+    control_rate=control_mean,
+    treatment_rate=treatment_mean,
     control_to_treatment_ratio=1,
-    tail_type="one_tail")
+    tail_type="one_tail",
+)
 
 print(f"Control Samples: {required_control_samples:,}")
 print(f"Treatment Samples: {required_treatment_samples:,}")
@@ -207,13 +206,16 @@ import numpy as np
 from scipy import stats
 
 from numpy.random import seed
+
 seed(5)
 
 
 number_simulations = int(1e4)
 null_average = 100
 scale = 0.25
-treatment_effect_samples = np.random.laplace(loc=null_average, scale=scale, size=number_simulations)
+treatment_effect_samples = np.random.laplace(
+    loc=null_average, scale=scale, size=number_simulations
+)
 
 x_global_min = min(treatment_effect_samples)
 x_global_max = max(treatment_effect_samples)
@@ -231,36 +233,36 @@ fig.add_trace(
     go.Scatter(
         x=x_range,
         y=y_kde,
-        mode='lines',
-        fill='tozeroy',
-        name=f'Scale: {scale}',
-        hovertemplate='Pr(Treatment Effect > %{x:.2f}) = %{customdata:.2%}<extra></extra>',
+        mode="lines",
+        fill="tozeroy",
+        name=f"Scale: {scale}",
+        hovertemplate="Pr(Treatment Effect > %{x:.2f}) = %{customdata:.2%}<extra></extra>",
         hoverlabel=dict(font_size=18, font_family="Arial"),
-        customdata=1 - cdf_values
+        customdata=1 - cdf_values,
     ),
-    #row=row,
-    #col=col
+    # row=row,
+    # col=col
 )
 
-fig.update_xaxes(title_text='Potential Treatment Effect (ITC)',showticklabels=True, title_standoff=10)
-
-fig.update_layout(
-    title = f"Treatment Effects are Laplace Distributed with μ = {null_average} and b = {scale}",
-    hoverlabel=dict(
-        font_size=16,
-        font_family="Arial",
-        font_color="white"
-    ),
+fig.update_xaxes(
+    title_text="Potential Treatment Effect (ITC)",
+    showticklabels=True,
+    title_standoff=10,
 )
 
 fig.update_layout(
-    #height=500,  # Adjust height for 2x2 layout
-    #width=700,   # Adjust width for better spacing
+    title=f"Treatment Effects are Laplace Distributed with μ = {null_average} and b = {scale}",
+    hoverlabel=dict(font_size=16, font_family="Arial", font_color="white"),
+)
+
+fig.update_layout(
+    # height=500,  # Adjust height for 2x2 layout
+    # width=700,   # Adjust width for better spacing
     showlegend=False,
-    font=dict(size=14)
+    font=dict(size=14),
 )
-fig.update_yaxes(title_text='', showticklabels=False)
-fig.update_xaxes(tickvals = [98,99,100,101,102])
+fig.update_yaxes(title_text="", showticklabels=False)
+fig.update_xaxes(tickvals=[98, 99, 100, 101, 102])
 fig.show()
 
 ```
@@ -283,9 +285,10 @@ null_average = 100
 scale = 0.25
 
 
-#number_simulations = int(1e3)
 all_sims = []
-treatment_effect_samples = laplace(loc=null_average, scale=scale, size=number_simulations)
+treatment_effect_samples = laplace(
+    loc=null_average, scale=scale, size=number_simulations
+)
 
 all_positive_effect_results = []
 all_negative_effect_results = []
@@ -293,55 +296,65 @@ all_negative_effect_results = []
 for simulation_number in range(number_simulations):
     treatment_effect_actual = treatment_effect_samples[simulation_number]
 
-    control_daily_trials = int(required_control_samples/ max_number_test_days)
-    treatment_daily_trials = int(required_treatment_samples/ max_number_test_days)
+    control_daily_trials = int(required_control_samples / max_number_test_days)
+    treatment_daily_trials = int(required_treatment_samples / max_number_test_days)
 
     control_trials_list = cumsum(repeat(control_daily_trials, max_number_test_days))
     treatment_trials_list = cumsum(repeat(treatment_daily_trials, max_number_test_days))
 
     treatment_mean = control_mean * treatment_effect_actual / 100
-    control_events_list = cumsum(binomial(control_daily_trials, control_mean, max_number_test_days))
-    treatment_events_list = cumsum(binomial(treatment_daily_trials, treatment_mean, max_number_test_days))
+    control_events_list = cumsum(
+        binomial(control_daily_trials, control_mean, max_number_test_days)
+    )
+    treatment_events_list = cumsum(
+        binomial(treatment_daily_trials, treatment_mean, max_number_test_days)
+    )
 
     p_control = control_events_list / control_trials_list
     p_treatment = treatment_events_list / treatment_trials_list
 
     delta_list = p_treatment - p_control
-    observed_effect_list = treatment_events_list*control_trials_list/(control_events_list*treatment_trials_list)
+    observed_effect_list = (
+        treatment_events_list
+        * control_trials_list
+        / (control_events_list * treatment_trials_list)
+    )
 
-    standard_error = sqrt((p_control * (1 - p_control) / control_trials_list) +
-                         (p_treatment * (1 - p_treatment) / treatment_trials_list))
+    standard_error = sqrt(
+        (p_control * (1 - p_control) / control_trials_list)
+        + (p_treatment * (1 - p_treatment) / treatment_trials_list)
+    )
 
     # Compute Z-score
-    z_score = round((delta_list - 0)/standard_error,2)
+    z_score = round((delta_list - 0) / standard_error, 2)
     p_values = array([1 - norm.cdf(z) for z in z_score])
     inner_dict = {
         "experiment_number": simulation_number + 1,
-        "Day": [int(i+1) for i in range(max_number_test_days)],
-        "control trials":control_trials_list.astype(int),
-        "control rate (%)": round(100*p_control,2),
-        "treatment trials":treatment_trials_list,
-        "treatment rate (%)": round(100*p_treatment,2),
-        "delta (%)": round(delta_list*100,2),
+        "Day": [int(i + 1) for i in range(max_number_test_days)],
+        "control trials": control_trials_list.astype(int),
+        "control rate (%)": round(100 * p_control, 2),
+        "treatment trials": treatment_trials_list,
+        "treatment rate (%)": round(100 * p_treatment, 2),
+        "delta (%)": round(delta_list * 100, 2),
         "z-score": z_score,
         "p-value": p_values,
-        "true_effect": treatment_effect_actual
+        "true_effect": treatment_effect_actual,
     }
     all_sims.append(inner_dict)
 
-    if treatment_effect_actual >=100:
+    if treatment_effect_actual >= 100:
         all_positive_effect_results.append(inner_dict)
     else:
         all_negative_effect_results.append(inner_dict)
 
 sim_df = pd.DataFrame(inner_dict)
-later_df = sim_df.copy()
 del sim_df["p-value"]
 del sim_df["true_effect"]
 
 
-
-print(f"Random Treatment Effect Programmed into Treatment: {treatment_effect_actual/100:.3%}")
+print(
+    f"Random Treatment Effect Programmed into Treatment: {treatment_effect_actual/100:.3%}"
+)
 
 
 display(HTML(sim_df[sim_df.columns[1:]].to_html(index=False)))
@@ -350,18 +363,18 @@ display(HTML(sim_df[sim_df.columns[1:]].to_html(index=False)))
 
 # Proper Significance Test
 
-To avoid `P-hacking`, we only calculate a `p-value` at the conclusion of our test.
+To avoid `P-hacking`, we only consider a `p-value` at the conclusion of our test.
 
 
 ```{python}
 #| label: fig-sig-test
 #| fig-cap: "A proper significance test only checks the p-value at the conclusion of a test."
+#| code-fold: true
+#| echo: true
+
 from scipy.stats import norm
 
 p_values_display = p_values.round(3)
-#p_values_display = ["" for i in range(len(p_values))]
-#p_values_display[max_number_test_days - 1] = round(p_values[max_number_test_days - 1],3)
-
 inner_dict["p-value"] = p_values_display
 sim_df = pd.DataFrame(inner_dict)
 del sim_df["true_effect"]
@@ -376,27 +389,32 @@ Let's check the results of our `{python} f"{number_simulations:,}"` simulations.
 When our true Treatment Effect < 100, our significance test performs very well.
 
 ```{python}
+#| code-fold: true
+#| echo: true
 from numpy import mean, where
 
 final_df = pd.concat(map(pd.DataFrame, all_negative_effect_results), ignore_index=True)
 final_df = final_df[final_df.Day == max_number_test_days]
 
-negative_effect_accuracy = 1 - mean(where(final_df["p-value"] < 0.05 , 1, 0))
+negative_effect_accuracy = 1 - mean(where(final_df["p-value"] < 0.05, 1, 0))
 ```
 **Retained Control**: `{python} f"{negative_effect_accuracy:.2%}"`; Treatment correctly didn't reach `Significance (α) = 0.05`.
 
 
 ## Treatment Effect > 100
 
-When our true Treatment Effect > 100, our significance test performs terribly.
+When our true Treatment Effect > 100, our significance test performs terribly. Why? <br>Our test was designed to detect `101`, but effects are centered at 100.
 
 ```{python}
+#| code-fold: true
+#| echo: true
+
 from numpy import mean, where, array
 
 final_df = pd.concat(map(pd.DataFrame, all_positive_effect_results), ignore_index=True)
 final_df = final_df[final_df.Day == max_number_test_days]
 
-positive_effect_accuracy = mean(where(final_df["p-value"] < alpha , 1, 0))
+positive_effect_accuracy = mean(where(final_df["p-value"] < alpha, 1, 0))
 
 ```
 
@@ -405,7 +423,7 @@ positive_effect_accuracy = mean(where(final_df["p-value"] < alpha , 1, 0))
 
 # Improper Significance Test
 
-Let's break the rules!!! Let's calculate a `p-value` every day of our test.<br>
+Let's break the rules!!! Let's glance at `p-value` every day of our test.<br>
 _**`Significance Rule`**_: p-value < 0.05 <br>
 _**`Futility Rule`**_: p-value > 0.95
 
@@ -413,28 +431,49 @@ _**`Futility Rule`**_: p-value > 0.95
 ```{python}
 #| label: fig-bad-sig-test
 #| fig-cap: "Breaking the rules of significance testing allows us more easily detect winners."
+#| code-fold: true
+#| echo: true
 from scipy.stats import norm
 
-
+# Build all sims for analysis
 later_df = pd.concat(map(pd.DataFrame, all_sims), ignore_index=True)
-first_day_occurrence = later_df[later_df["p-value"] < alpha].groupby("experiment_number")["Day"].min()
 
-# Merge back to later_df
-later_df["first_occurrence_sig"] = later_df["experiment_number"].map(first_day_occurrence)
-
-later_df["first_occurrence_sig"] = later_df["first_occurrence_sig"].fillna(max_number_test_days)
-
-
-
-first_day_occurrence_futility = later_df[later_df["p-value"] > 1- alpha].groupby("experiment_number")["Day"].min()
-later_df["first_day_occurrence_futility"] = later_df["experiment_number"].map(first_day_occurrence_futility)
-
-later_df["first_day_occurrence_futility"] = later_df["first_day_occurrence_futility"].fillna(max_number_test_days)
-
-later_df["first_day"] = later_df[["first_occurrence_sig", "first_day_occurrence_futility"]].min(axis=1)
+# Calculate First Occurence of p-value < 0.05 for every simulated experiment
+first_day_occurrence = (
+    later_df[later_df["p-value"] < alpha].groupby("experiment_number")["Day"].min()
+)
+later_df["first_occurrence_sig"] = later_df["experiment_number"].map(
+    first_day_occurrence
+)
+later_df["first_occurrence_sig"] = later_df["first_occurrence_sig"].fillna(
+    max_number_test_days
+)
 
 
-display(HTML(later_df[later_df.columns[1:len(later_df.columns)-4]].tail(5).to_html(index=False)))
+# Calculate First Occurence of Futility p-value > 0.95 for every simulated experiment
+first_day_occurrence_futility = (
+    later_df[later_df["p-value"] > 1 - alpha].groupby("experiment_number")["Day"].min()
+)
+later_df["first_day_occurrence_futility"] = later_df["experiment_number"].map(
+    first_day_occurrence_futility
+)
+later_df["first_day_occurrence_futility"] = later_df[
+    "first_day_occurrence_futility"
+].fillna(max_number_test_days)
+
+# Determine Which Takes Place First
+later_df["first_day"] = later_df[
+    ["first_occurrence_sig", "first_day_occurrence_futility"]
+].min(axis=1)
+
+# Display
+display(
+    HTML(
+        later_df[later_df.columns[1 : len(later_df.columns) - 4]]
+        .tail(5)
+        .to_html(index=False)
+    )
+)
 
 ```
 
@@ -443,15 +482,20 @@ display(HTML(later_df[later_df.columns[1:len(later_df.columns)-4]].tail(5).to_ht
 When our true Treatment Effect < 100, our significance test performs a little worse.
 
 ```{python}
-from numpy import mean, where, array
+#| code-fold: true
+#| echo: true
 
-small_df = later_df[later_df.Day == later_df.first_day].copy()
+# Shrink datasets to only final day records
+small_df = later_df[later_df.Day == later_df.first_day]
 
-negative_df = small_df [small_df.true_effect < 100].copy()
+# Zoom into experiments where true effect < 100
+negative_df = small_df[small_df.true_effect < 100]
 
+# Calculate runtime of experiment
 avg_number_days = negative_df["Day"].mean()
 
-negative_effect_accuracy = 1 - mean(where(negative_df["p-value"] < alpha , 1, 0))
+# Calculate accuracy of retaining control
+negative_effect_accuracy = 1 - mean(where(negative_df["p-value"] < alpha, 1, 0))
 ```
 **Retained Control**: `{python} f"{negative_effect_accuracy:.2%}"`; Treatment correctly didn't reach `Significance (α) = 0.05`. <br>
 **Avg runtime**: `{python} f"{avg_number_days:.2f}"`
@@ -464,11 +508,13 @@ When our true Treatment Effect > 100, our Improper significance test performs be
 And it takes 20% less time to confirm a winner.
 
 ```{python}
+#| code-fold: true
+#| echo: true
 from numpy import mean, where, array
 
-small_df = later_df[later_df.Day == later_df.first_day].copy()
+small_df = later_df[later_df.Day == later_df.first_day]
 
-positive_df = small_df [small_df.true_effect > 100].copy()
+positive_df = small_df [small_df.true_effect > 100]
 
 avg_number_days = positive_df["Day"].mean()
 
